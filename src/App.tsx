@@ -1,39 +1,27 @@
-// src/App.tsx
-import React from 'react';
-import { Provider } from 'react-redux';
-import { store } from './Store';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-import { ThemeProvider } from '@mui/material/styles'; // Import ThemeProvider
-import theme from './theme'; // Import your theme
-import Signup from './components/SignUp';
-import Login from './components/Login';
-import ForgotPassword from './components/ForgotPassword';
-import ResetPassword from './components/ResetPassword';
-import Logout from './components/Logout';
-import Navbar from './components/Navbar'; // Import Navbar
-import Home from './components/Home'; // Import Home
-import { setupListeners } from '@reduxjs/toolkit/query';
+import { Routes, Route } from "react-router-dom";
+import Navbar from "./components/Navbar";
+import Signup from "./components/SignUp";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import Login from "./components/Login";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 
-setupListeners(store.dispatch);
-
-const App: React.FC = () => {
+export default function App() {
   return (
-    <Provider store={store}>
-      <ThemeProvider theme={theme}> {/* Wrap your app with ThemeProvider */}
-        <Router>
-          <Navbar /> {/* Add Navbar here */}
-          <Routes>
-            <Route path="/" element={<Home />} /> {/* Dummy homepage route */}
-            <Route path="/signup" element={<Signup />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/reset-password/:token" element={<ResetPassword />} />
-            <Route path="/logout" element={<Logout />} />
-          </Routes>
-        </Router>
-      </ThemeProvider>
-    </Provider>
+    <>
+      <Navbar />
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+      />
+      <Routes>
+        <Route path="/signup" element={<Signup />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+      </Routes>
+    </>
   );
-};
-
-export default App;
+}

@@ -1,157 +1,242 @@
-// src/components/Signup.tsx
-import React from "react";
-import { useForm } from "react-hook-form";
+import { useState, useEffect } from "react";
+import { useForm, SubmitHandler } from "react-hook-form";
+import { TextField, Button, Container, Typography, Box, IconButton, InputAdornment, Link } from "@mui/material";
+import { Visibility, VisibilityOff } from "@mui/icons-material";
+import { useSignupMutation } from "../../services/authApi";
+import { toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
-import { useRegisterMutation } from "../../services/authApi";
-import {
-  TextField,
-  Button,
-  Typography,
-  Container,
-  Box,
-  Card,
-  CardContent,
-} from "@mui/material";
+import { motion } from "framer-motion";
 import { makeStyles } from "@mui/styles";
 import { Theme } from "@mui/material/styles";
-import { toast, ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
-import { useDispatch } from "react-redux";
-import { setTokens } from "../../redux/authSlice"; // Import setTokens
-import { useNavigate } from "react-router-dom"; // Import useNavigate
+import { useNavigate } from "react-router-dom";
 
-// Extend MUI Theme for makeStyles
-declare module "@mui/styles/defaultTheme" {
+declare module '@mui/styles/defaultTheme' {
   interface DefaultTheme extends Theme {}
 }
 
-// **🎨 Define Styles using makeStyles**
+// ✅ Styles using useStyles
 const useStyles = makeStyles((theme) => ({
   container: {
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
-    height: "100vh",
-    background: `linear-gradient(135deg, ${theme.palette.primary.dark}, ${theme.palette.primary.light})`,
+    minHeight: "100vh",
+    padding: theme.spacing(3),
   },
-  card: {
-    width: "100%",
-    maxWidth: 400, // Set a max width for the card
+  formBox: {
     padding: theme.spacing(4),
-    boxShadow: theme.shadows[5],
-    backgroundColor: theme.palette.background.paper,
-    borderRadius: theme.shape.borderRadius,
+    borderRadius: "16px",
+    boxShadow: "0 8px 32px rgba(0, 0, 0, 0.1)",
+    width: "100%",
+    maxWidth: "400px",
+    backgroundColor: "#ffffff",
   },
   title: {
-    textAlign: "center",
-    fontWeight: theme.typography.fontWeightBold,
-    color: theme.palette.primary.main,
-    marginBottom: theme.spacing(2),
+    fontWeight: 700,
+    marginBottom: theme.spacing(3),
+    color: "#2d3748",
+    fontSize: "1.75rem",
   },
   inputField: {
-    marginBottom: theme.spacing(2),
+    marginBottom: theme.spacing(3),
+    "& .MuiOutlinedInput-root": {
+      borderRadius: "8px",
+    },
   },
-  submitButton: {
-    fontWeight: theme.typography.fontWeightBold,
+  button: {
     padding: theme.spacing(1.5),
-    background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-    color: theme.palette.common.white,
+    fontWeight: 600,
+    fontSize: "1rem",
+    borderRadius: "8px",
+    textTransform: "none",
+    boxShadow: "none",
+  },
+  link: {
+    fontWeight: 500,
+    color: "#4a5568",
     "&:hover": {
-      background: `linear-gradient(90deg, ${theme.palette.primary.dark}, ${theme.palette.secondary.dark})`,
+      color: "#2d3748",
     },
   },
 }));
 
-// **📝 Validation Schema**
-const schema = yup.object().shape({
-  name: yup.string().required("Name is required").min(2).max(50),
-  email: yup.string().email("Invalid email format").required("Email is required"),
+// ✅ Validation Schema
+const signupSchema = yup.object().shape({
+  name: yup
+    .string()
+    .min(2, "Name must be at least 2 characters")
+    .required("Name is required"),
+  email: yup
+    .string()
+    .email("Invalid email format")
+    .required("Email is required"),
   password: yup
     .string()
-    .required("Password is required")
-    .min(8)
-    .max(32)
-    .matches(/\d/, "Must contain at least one number")
-    .matches(/[a-z]/, "Must contain at least one lowercase letter")
-    .matches(/[A-Z]/, "Must contain at least one uppercase letter")
-    .matches(/[\W]/, "Must contain at least one special character"),
+    .min(8, "Password must be at least 8 characters")
+    .required("Password is required"),
+  confirmPassword: yup
+    .string()
+    .oneOf([yup.ref("password")], "Passwords must match")
+    .required("Confirm Password is required"),
 });
 
-const Signup: React.FC = () => {
+interface ISignupForm {
+  name: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+}
+
+export default function Signup() {
   const classes = useStyles();
-  const dispatch = useDispatch();
-  const navigate = useNavigate(); // Initialize useNavigate
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm({
-    resolver: yupResolver(schema),
+  const navigate = useNavigate();
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [countdown, setCountdown] = useState<number | null>(null);
+
+  const { register, handleSubmit, formState: { errors, isValid } } = useForm<ISignupForm>({
+    resolver: yupResolver(signupSchema),
+    mode: "onChange",
   });
-  const [registerUser ] = useRegisterMutation();
 
-  const onSubmit = async (data: any) => {
+  const [signup, { isLoading }] = useSignupMutation();
+
+  const handleTogglePassword = (field: "password" | "confirmPassword") => {
+    field === "password"
+      ? setShowPassword(!showPassword)
+      : setShowConfirmPassword(!showConfirmPassword);
+  };
+
+  const onSubmit: SubmitHandler<ISignupForm> = async (data) => {
     try {
-      const response = await registerUser (data).unwrap();
-      const { accessToken, refreshToken } = response.data; // Adjust based on your API response structure
+      await signup({ ...data, active: true }).unwrap();
+      toast.success("Account created successfully! Redirecting to login in 5 seconds...");
 
-      // Dispatch tokens to Redux
-      dispatch(setTokens({ accessToken, refreshToken }));
-      toast.success("User  created successfully!"); // Show success toast
+      let timeLeft = 5;
+      setCountdown(timeLeft);
 
-      // Redirect to login page
-      navigate("/login"); // Redirect to login page after signup
-    } catch (error) {
-      toast.error("Failed to create user. Please try again."); // Show error toast
+      const timerInterval = setInterval(() => {
+        timeLeft -= 1;
+        setCountdown(timeLeft);
+        if (timeLeft <= 0) {
+          clearInterval(timerInterval);
+          navigate("/login"); // Redirect after countdown
+        }
+      }, 1000);
+    } catch (error: any) {
+      toast.error(error?.data?.message || "Registration failed");
     }
   };
 
   return (
-    <Container className={classes.container}>
-      <Card className={classes.card}>
-        <CardContent>
-          <Typography variant="h4" className={classes.title}>
-            Sign Up
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.4 }}
+    >
+      <Container maxWidth="xs" className={classes.container}>
+        <Box className={classes.formBox}>
+          <Typography variant="h1" className={classes.title}>
+            Create Account
           </Typography>
-          <form onSubmit={handleSubmit(onSubmit)}>
-            <Box className={classes.inputField}>
-              <TextField
-                {...register("name")}
-                label="Name"
-                error={!!errors.name}
-                helperText={errors.name?.message}
-                fullWidth
-              />
-            </Box>
-            <Box className={classes.inputField}>
-              <TextField
-                {...register("email")}
-                label="Email"
-                error={!!errors.email}
-                helperText={errors.email?.message}
-                fullWidth
-              />
-            </Box>
-            <Box className={classes.inputField}>
-              <TextField
-                {...register("password")}
-                label="Password"
-                type="password"
-                error={!!errors.password}
-                helperText={errors.password?.message}
-                fullWidth
-              />
-            </Box>
-            <Button type="submit" variant="contained" fullWidth className={classes.submitButton}>
-              Sign Up
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-      <ToastContainer /> {/* Add ToastContainer for notifications */}
-    </Container>
-  );
-};
 
-export default Signup;
+          <motion.form
+            onSubmit={handleSubmit(onSubmit)}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.2 }}
+          >
+            <TextField
+              fullWidth
+              label="Full Name"
+              variant="outlined"
+              className={classes.inputField}
+              {...register("name")}
+              error={!!errors.name}
+              helperText={errors.name?.message}
+            />
+
+            <TextField
+              fullWidth
+              label="Email Address"
+              type="email"
+              variant="outlined"
+              className={classes.inputField}
+              {...register("email")}
+              error={!!errors.email}
+              helperText={errors.email?.message}
+            />
+
+            <TextField
+              fullWidth
+              label="Password"
+              type={showPassword ? "text" : "password"}
+              variant="outlined"
+              className={classes.inputField}
+              {...register("password")}
+              error={!!errors.password}
+              helperText={errors.password?.message}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton onClick={() => handleTogglePassword("password")}>
+                      {showPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+            />
+
+            <TextField
+              fullWidth
+              label="Confirm Password"
+              type={showConfirmPassword ? "text" : "password"}
+              variant="outlined"
+              className={classes.inputField}
+              {...register("confirmPassword")}
+              error={!!errors.confirmPassword}
+              helperText={errors.confirmPassword?.message}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton onClick={() => handleTogglePassword("confirmPassword")}>
+                      {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+            />
+
+            <Button
+              fullWidth
+              variant="contained"
+              color="primary"
+              className={classes.button}
+              type="submit"
+              disabled={isLoading || !isValid}
+            >
+              {isLoading ? "Creating Account..." : "Sign Up"}
+            </Button>
+
+            {countdown !== null && (
+              <Typography variant="body2" color="textSecondary" align="center" mt={2}>
+                Redirecting in {countdown} seconds...
+              </Typography>
+            )}
+
+            <Box mt={3} textAlign="center">
+              <Typography variant="body2" className={classes.link}>
+                Already have an account?{" "}
+                <Link href="/login" color="primary" underline="hover" fontWeight={600}>
+                  Log in
+                </Link>
+              </Typography>
+            </Box>
+          </motion.form>
+        </Box>  
+      </Container>
+    </motion.div>
+  );
+}

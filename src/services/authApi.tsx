@@ -1,90 +1,38 @@
-// src/features/userApi.ts
-import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
-import { setTokens } from '../redux/authSlice';
+import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 
-interface IUser {
-  name: string;
-  email: string;
-  password: string;
-}
-
-interface ILogin {
-  email: string;
-  password: string;
-}
-
-interface IForgotPassword {
-  email: string;
-}
-
-interface IResetPassword {
-  token: string;
-  newPassword: string;
-}
-
-interface IRefreshToken {
-  refreshToken: string;
-}
-
-const userApi = createApi({
-  reducerPath: 'userApi',
-  baseQuery: fetchBaseQuery({ baseUrl: 'http://localhost:5000/api/auth' }),
+export const authApi = createApi({
+  reducerPath: "authApi",
+  baseQuery: fetchBaseQuery({ baseUrl: "http://localhost:8000/api/users" }),
   endpoints: (builder) => ({
-    register: builder.mutation<void, IUser>({
-      query: (user) => ({
-        url: '/register',
-        method: 'POST',
-        body: user,
-      }),
-    }),
-    login: builder.mutation<{ accessToken: string; refreshToken: string }, ILogin>({
-      query: (credentials) => ({
-        url: '/login',
-        method: 'POST',
-        body: credentials,
-      }),
-    }),
-
-     
-    forgotPassword: builder.mutation<void, IForgotPassword>({
+    signup: builder.mutation({
       query: (data) => ({
-        url: '/forgot-password',
-        method: 'POST',
+        url: "/signup",
+        method: "POST",
         body: data,
       }),
     }),
-    resetPassword: builder.mutation<void, IResetPassword>({
+    login: builder.mutation({
       query: (data) => ({
-        url: '/reset-password',
-        method: 'POST',
+        url: "/login",
+        method: "POST",
         body: data,
       }),
     }),
-    refreshTokens: builder.mutation<{ accessToken: string; refreshToken: string }, IRefreshToken>({
+    forgotPassword: builder.mutation<{ message: string }, { email: string }>({
       query: (data) => ({
-        url: '/refresh-token',
-        method: 'POST',
+        url: "/forgot-password",
+        method: "POST",
         body: data,
       }),
-      // Handle successful token refresh
-      async onQueryStarted(arg, { dispatch, queryFulfilled }) {
-        try {
-          const { data } = await queryFulfilled;
-          dispatch(setTokens(data)); // Store new tokens in the user slice
-        } catch (error) {
-          console.error('Token refresh failed', error);
-        }
-      },
+    }),
+    resetPassword: builder.mutation<{ message: string }, { token: string; newPassword: string }>({
+      query: (data) => ({
+        url: "/reset-password",
+        method: "POST",
+        body: data,
+      }),
     }),
   }),
 });
 
-export const {
-  useRegisterMutation,
-  useLoginMutation,
-  useForgotPasswordMutation,
-  useResetPasswordMutation,
-  useRefreshTokensMutation,
-} = userApi;
-
-export default userApi;
+export const { useSignupMutation, useLoginMutation, useForgotPasswordMutation, useResetPasswordMutation } = authApi;

@@ -1,39 +1,41 @@
-// src/features/userSlice.ts
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
-interface UserState {
+interface AuthState {
   accessToken: string | null;
   refreshToken: string | null;
+  user: { name: string; email: string } | null;
 }
 
-const initialState: UserState = {
-  accessToken: null,
-  refreshToken: null,
+const initialState: AuthState = {
+  accessToken: localStorage.getItem("accessToken") || null,
+  refreshToken: localStorage.getItem("refreshToken") || null,
+  user: JSON.parse(localStorage.getItem("user") as string) || null,
 };
 
-const userSlice = createSlice({
-    name: "user",
-    initialState,
-    reducers: {
-      setTokens: (state, action: PayloadAction<{ accessToken: string; refreshToken: string }>) => {
-        if (action.payload.accessToken && action.payload.refreshToken) {
-          state.accessToken = action.payload.accessToken;
-          state.refreshToken = action.payload.refreshToken;
-          localStorage.setItem("accessToken", action.payload.accessToken);
-          localStorage.setItem("refreshToken", action.payload.refreshToken);
-        } else {
-          console.warn("Invalid tokens received:", action.payload);
-        }
-      },
-      clearTokens: (state) => {
-        state.accessToken = null;
-        state.refreshToken = null;
-        localStorage.removeItem("accessToken");
-        localStorage.removeItem("refreshToken");
-      },
+const authSlice = createSlice({
+  name: "auth",
+  initialState,
+  reducers: {
+    setTokens: (state, action: PayloadAction<{ 
+      accessToken: string; 
+      refreshToken: string 
+    }>) => {
+      state.accessToken = action.payload.accessToken;
+      state.refreshToken = action.payload.refreshToken;
     },
-  });
-  
+    setUser: (state, action: PayloadAction<{ 
+      name: string; 
+      email: string 
+    }>) => {
+      state.user = action.payload;
+    },
+    logout: (state) => {
+      state.accessToken = null;
+      state.refreshToken = null;
+      state.user = null;
+    },
+  },
+});
 
-export const { setTokens, clearTokens } = userSlice.actions;
-export default userSlice.reducer;
+export const { setTokens, setUser, logout } = authSlice.actions;
+export default authSlice.reducer;
